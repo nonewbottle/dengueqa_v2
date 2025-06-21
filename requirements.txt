@@ -4,8 +4,6 @@ malaya==5.1.1
 PySastrawi==1.2.0
 nltk==3.9.1
 numpy==2.2.6
-sentence-transformers==4.1.0
-torch==2.7.1
 langdetect==1.0.9
 gdown==5.2.0
 Jinja2==3.1.6
