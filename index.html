@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sistem Soal Jawab Denggi</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #baccd6;
+            height: 100vh;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .chat-wrapper {
+            background: rgba(255,255,255,0.91);
+            backdrop-filter: blur(7px);
+            border-radius: 2rem;
+            box-shadow: 0 8px 48px 0 rgba(20, 34, 78, 0.13), 0 2px 14px rgba(40,40,100,0.08);
+            width: 100%;
+            max-width: 1400px;
+            min-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            margin: 3vh 0;
+        }
+        h1 {
+            text-align: center;
+            color: #205081;
+            margin: 40px 0 16px 0;
+            font-size: 2.25em;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            text-shadow: 0 2px 12px rgba(30,30,60,0.08);
+        }
+        .reset {
+            position: absolute;
+            top: 18px;
+            right: 28px;
+            font-size: 1em;
+            background: #e5e5e5cc;
+            color: #666;
+            padding: 6px 15px 6px 10px;
+            border-radius: 13px;
+            text-decoration: none;
+            transition: background .18s, color .18s;
+            font-weight: 500;
+        }
+        .reset:hover {
+            background: #bcc6c9;
+            color: #444;
+        }
+        .chat-box {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 24px 10px 24px;
+            margin-bottom: 12px;
+            margin-top: 5px;
+        }
+        .bubble {
+            display: inline-block;
+            padding: 14px 18px;
+            border-radius: 22px;
+            margin-bottom: 11px;
+            max-width: 80%;
+            word-break: break-word;
+            font-size: 1.08em;
+            box-shadow: 0 1px 4px rgba(160, 180, 255, 0.05);
+        }
+        .user {
+            background: #cae6fa;
+            color: #205081;
+            float: right;
+            margin-left: 20%;
+            text-align: right;
+        }
+        .bot {
+            background: #f3f4fa;
+            color: #252525;
+            float: left;
+            margin-right: 20%;
+            text-align: left;
+        }
+        .bot .sim {
+            color: #888;
+            font-size: 0.88em;
+        }
+        .clearfix::after { content: ""; clear: both; display: table; }
+        .input-area {
+            display: flex;
+            padding: 18px 24px 18px 24px;
+            background: #dfeaf1;
+            border-bottom-left-radius: 18px;
+            border-bottom-right-radius: 18px;
+            border-top: 1px solid #e3e3e3;
+        }
+        .input-area textarea {
+            flex: 1;
+            resize: none;
+            border-radius: 8px 0 0 8px;
+            font-size: 1.12em;
+            padding: 13px 12px;
+            border: 1px solid #bfc9d1;
+            outline: none;
+            background: #fff;
+            margin: 0;
+            transition: border .2s;
+        }
+        .input-area textarea:focus {
+            border: 1.5px solid #7ab6f8;
+        }
+        .input-area button {
+            border-radius: 0 8px 8px 0;
+            border: none;
+            background: #4285f4;
+            color: #fff;
+            font-size: 1.1em;
+            padding: 0 25px;
+            margin: 0;
+            cursor: pointer;
+            transition: background .17s;
+        }
+        .input-area button:hover {
+            background: #1a73e8;
+        }
+        .back-btn {
+            position: absolute;
+            top: 18px;
+            left: 28px;
+            font-size: 1em;
+            background: #e5e5e5cc;
+            color: #205081;
+            padding: 6px 18px 6px 12px;
+            border-radius: 13px;
+            text-decoration: none;
+            transition: background .22s, color .2s;
+            z-index: 10;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+        }
+        .back-btn:hover {
+            background: #9deef9;
+            color: #174e7c;
+        }
+        @media (max-width: 900px) {
+            .chat-wrapper { max-width: 98vw; }
+        }
+        @media (max-width: 600px) {
+            h1 { font-size: 1.3em; }
+            .chat-wrapper { min-height: 80vh; }
+            .chat-box { padding: 10px 7px 10px 7px; }
+            .input-area { padding: 10px 7px 10px 7px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="chat-wrapper" style="position:relative;">
+            <a class="back-btn" href="{{ url_for('welcome') }}">&#8592; Kembali</a>
+            <h1>Chat Soal Jawab Denggi</h1>
+            <a class="reset" href="/reset">🗑️ Set Semula Sembang</a>
+            <div class="chat-box clearfix" id="chat-box">
+                {% for item in chat_history %}
+                    <div class="bubble user">{{ item.user }}</div><div class="clearfix"></div>
+                    <div class="bubble bot">
+                        <b>Soalan serupa:</b> {{ item.bot_q }}<br>
+                        <b>Jawapan:</b>
+                        <div style="white-space:pre-line;">{{ item.bot_a }}</div>
+                        <div class="sim">
+                            [Similarity: {{ item.sim }}]
+                            {% if item.method == 'semantic' %}
+                                <span style="background:#cae6fa;color:#205081;font-size:0.94em;padding:2px 9px;border-radius:8px;margin-left:8px;">Semantic</span>
+                            {% elif item.method == 'token' %}
+                                <span style="background:#ffe2a6;color:#8e6500;font-size:0.94em;padding:2px 9px;border-radius:8px;margin-left:8px;">Token Match</span>
+                            {% endif %}
+                            {% if item.lang == 'en' %}
+                                <span style="background:#e2e6e8;color:#76797b;font-size:0.94em;padding:2px 9px;border-radius:8px;margin-left:8px;">en</span>
+                            {% elif item.lang in ['ms', 'id', 'rojak'] %}
+                                <span style="background:#e2e6e8;color:#76797b;font-size:0.94em;padding:2px 9px;border-radius:8px;margin-left:8px;">ms</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="clearfix"></div>
+                {% endfor %}
+            </div>
+            <form class="input-area" method="POST" autocomplete="off">
+                <textarea name="question" id="question" rows="2" autofocus required placeholder="Taip soalan anda di sini..."></textarea>
+                <button type="submit">Hantar</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        // Auto-scroll to the latest message
+        var chatBox = document.getElementById('chat-box');
+        if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+        // Focus textarea on load
+        document.getElementById('question').focus();
+
+        // Submit form on Enter, new line with Shift+Enter
+        const textarea = document.getElementById('question');
+        const form = textarea.closest('form');
+        textarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                form.submit();
+            }
+        });
+    </script>
+</body>
+</html>
