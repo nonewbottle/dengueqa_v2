@@ -15,6 +15,8 @@ class DevNull:
     def flush(self): pass
 
 sys.stderr = DevNull()
+
+# Suppress warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -35,30 +37,20 @@ from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
 
-# === Download stopwords if not available ===
-try:
-    malay_stopwords = set(malaya.text.function.get_stopwords())
-except Exception:
-    import ssl
-    ssl._create_default_https_context = ssl._create_unverified_context
-    malay_stopwords = set(malaya.text.function.get_stopwords())
-
-try:
-    english_stopwords = set(stopwords.words('english'))
-except LookupError:
-    nltk.download('stopwords')
-    english_stopwords = set(stopwords.words('english'))
+# === Remove stopwords from a list of tokens ===
+malay_stopwords = set(malaya.text.function.get_stopwords())
+nltk.download('stopwords')
+english_stopwords = set(stopwords.words('english'))
 
 def remove_stopwords(tokens, lang='en'):
     stopword_set = english_stopwords if lang == 'en' else malay_stopwords
     return [t for t in tokens if t not in stopword_set]
 
-# ========== Rojak Language Detection ==========
+# ========== Detect Rojak ==========
 def is_rojak(text):
     tokens = [t for t in word_tokenize(text.lower()) if t.isalpha()]
     malay_stop_count = sum(1 for t in tokens if t in malay_stopwords)
     english_stop_count = sum(1 for t in tokens if t in english_stopwords)
-    # Both counts > 0 = code-mix (rojak)
     return malay_stop_count > 0 and english_stop_count > 0
 
 # ========== Malay Preprocessing ==========
@@ -74,6 +66,7 @@ def preprocess_question_malay(q):
 
 # ========== English Preprocessing ==========
 wnl = WordNetLemmatizer()
+
 def preprocess_question_english(q):
     tokens = word_tokenize(q.lower())
     tokens = [t for t in tokens if t.isalpha()]
@@ -88,7 +81,7 @@ def jaccard_similarity(a, b):
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
-# ========== Model Auto-Download ==========
+# ========== Load Model and Data ==========
 MODEL_PATH = 'test-retrieval_model.pkl'
 GOOGLE_DRIVE_FILE_ID = '1Js4Cz8VVMbQLcADESspGEjdlZJVr0N_B'
 
@@ -102,16 +95,17 @@ def download_model():
 
 download_model()
 
-# ========== Load Model and Data ==========
-with open(MODEL_PATH, 'rb') as f:
+with open('test-retrieval_model.pkl', 'rb') as f:
     data = pickle.load(f)
 
 model = data['vectorizer']
+
 # Malay data
 question_vecs_malay = data['question_vecs_malay']
 questions_malay = data['questions_malay']
 answers_malay = data['answers_malay']
 q_stems_malay = data['q_stems_malay']
+
 # English data
 question_vecs_eng = data['question_vecs_eng']
 questions_eng = data['questions_eng']
@@ -123,8 +117,8 @@ def retrieve_answer(user_question):
     tokens = [t for t in word_tokenize(user_question.lower()) if t.isalpha()]
     malay_stop_count = sum(1 for t in tokens if t in malay_stopwords)
     english_stop_count = sum(1 for t in tokens if t in english_stopwords)
-    
-    # Language decision by stopword count
+
+    # Decide language by which stopword count is higher
     if malay_stop_count > english_stop_count:
         lang = 'ms'
     elif english_stop_count > malay_stop_count:
@@ -134,8 +128,8 @@ def retrieve_answer(user_question):
             lang = detect(user_question)
         except Exception:
             lang = 'ms'
-
-    if lang in ['ms', 'id'] or is_rojak(user_question):
+    
+    if lang in ['ms', 'id']:
         questions = questions_malay
         answers = answers_malay
         question_vecs = question_vecs_malay
@@ -184,7 +178,7 @@ def index():
         if user_question:
             retrieved_q, answer, score, method, lang = retrieve_answer(user_question)
             if retrieved_q is None:
-                retrieved_q = "(tiada padanan)" if lang in ['ms', 'id'] else "(no match)"
+                retrieved_q = "(tiada padanan)" if lang in ['ms', 'id', 'rojak'] else "(no match)"
             chat_history.append({
                 "user": user_question,
                 "bot_q": retrieved_q,
